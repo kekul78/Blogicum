@@ -55,11 +55,13 @@ class Post(PublishedModel):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор публикации',
-        related_name='posts'
+        related_name='posts',
+        null=True,
     )
     location = models.ForeignKey(Location,
                                  on_delete=models.SET_NULL,
                                  null=True,
+                                 blank=True,
                                  verbose_name='Местоположение',
                                  related_name='posts')
     category = models.ForeignKey(Category,
@@ -68,9 +70,28 @@ class Post(PublishedModel):
                                  verbose_name='Категория',
                                  related_name='posts')
 
+    image = models.ImageField('Фото', upload_to='posts_images', blank=True)
+
     class Meta:
+        ordering = ['-pub_date']
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
 
     def __str__(self):
         return self.title
+
+
+class Comment(models.Model):
+    text = models.TextField('Текст поздравления')
+    post = models.ForeignKey(Post,
+                             related_name='comments',
+                             on_delete=models.CASCADE,
+                             )
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('created_at',)
+
+    def __str__(self):
+        return self.author

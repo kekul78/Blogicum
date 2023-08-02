@@ -54,31 +54,6 @@ class PostDetailView(PostMixin, LoginRequiredMixin, DetailView):
         return context
 
 
-class ProfileListView(ListView):
-    model = MyUser
-    template_name = 'blog/profile.html'
-    paginate_by = 10
-    fields = '__all__'
-
-    def get_queryset(self):
-        username = self.kwargs['username']
-        try:
-            profile = MyUser.objects.get(username=username)
-        except MyUser.DoesNotExist:
-            raise Http404
-        return Post.objects.annotate(
-            comment_count=Count('comments')
-        ).order_by('-pub_date').filter(author=profile)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(
-            MyUser,
-            username=self.kwargs['username']
-        )
-        return context
-
-
 @login_required
 def edit_comment(request, post_id, comment_id):
     comment = get_object_or_404(Comment, post_id=post_id, id=comment_id)
@@ -174,6 +149,31 @@ class PostDeleteView(PostMixin, LoginRequiredMixin, DeleteView):
         if instance.author != request.user:
             return redirect('blog:post_detail', post_id=kwargs['post_id'])
         return super().dispatch(request, *args, **kwargs)
+
+
+class ProfileListView(ListView):
+    model = MyUser
+    template_name = 'blog/profile.html'
+    paginate_by = 10
+    fields = '__all__'
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        try:
+            profile = MyUser.objects.get(username=username)
+        except MyUser.DoesNotExist:
+            raise Http404
+        return Post.objects.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date').filter(author=profile)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile'] = get_object_or_404(
+            MyUser,
+            username=self.kwargs['username']
+        )
+        return context
 
 
 class ProfiletUpdateView(UpdateView):

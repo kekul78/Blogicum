@@ -1,7 +1,6 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 
-User = get_user_model()
+from users.models import MyUser
 
 
 class PublishedModel(models.Model):
@@ -52,7 +51,7 @@ class Post(PublishedModel):
                                               'время в будущем — можно делать '
                                               'отложенные публикации.')
     author = models.ForeignKey(
-        User,
+        MyUser,
         on_delete=models.CASCADE,
         verbose_name='Автор публикации',
         related_name='posts',
@@ -88,7 +87,7 @@ class Comment(models.Model):
                              on_delete=models.CASCADE,
                              )
     created_at = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(MyUser, on_delete=models.CASCADE)
 
     class Meta:
         ordering = ('created_at',)

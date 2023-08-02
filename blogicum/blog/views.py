@@ -1,16 +1,17 @@
 from django.shortcuts import get_object_or_404, render, redirect
-
+from django.urls import reverse_lazy, reverse
+from django.contrib.auth.decorators import login_required
+from django.http import Http404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
+from django.utils import timezone
 from django.views.generic import (
     UpdateView, ListView, DetailView, DeleteView, CreateView
 )
-from django.http import Http404
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy, reverse
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+
 from .forms import PostForm, CommentForm, UserForm
-from blog.models import Post, Category, User, Comment
-from django.utils import timezone
+from blog.models import Post, Category, Comment
+from users.models import MyUser
 
 
 class PostMixin:
@@ -18,7 +19,6 @@ class PostMixin:
 
 
 class IndexListView(PostMixin, LoginRequiredMixin, ListView):
-    model = Post
     template_name = 'blog/index.html'
     ordering = ('-pub_date')
     paginate_by = 10
@@ -34,7 +34,6 @@ class IndexListView(PostMixin, LoginRequiredMixin, ListView):
 
 
 class PostDetailView(PostMixin, LoginRequiredMixin, DetailView):
-    model = Post
     template_name = 'blog/detail.html'
     paginate_by = 10
     pk_url_kwarg = 'post_id'
@@ -56,8 +55,7 @@ class PostDetailView(PostMixin, LoginRequiredMixin, DetailView):
 
 
 class ProfileListView(ListView):
-    """Профиль пользователя"""
-    model = User
+    model = MyUser
     template_name = 'blog/profile.html'
     paginate_by = 10
     fields = '__all__'
@@ -65,8 +63,8 @@ class ProfileListView(ListView):
     def get_queryset(self):
         username = self.kwargs['username']
         try:
-            profile = User.objects.get(username=username)
-        except User.DoesNotExist:
+            profile = MyUser.objects.get(username=username)
+        except MyUser.DoesNotExist:
             raise Http404
         return Post.objects.annotate(
             comment_count=Count('comments')
@@ -75,7 +73,7 @@ class ProfileListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['profile'] = get_object_or_404(
-            User,
+            MyUser,
             username=self.kwargs['username']
         )
         return context
@@ -98,7 +96,6 @@ def edit_comment(request, post_id, comment_id):
 
 @login_required
 def delete_comment(request, post_id, comment_id):
-    """ Удаление комментария """
     comment = get_object_or_404(Comment, post_id=post_id, id=comment_id)
     if comment.author != request.user:
         return redirect('login')
@@ -119,21 +116,17 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse('blog:post_detail', args=[self.kwargs['post_id']])
 
-    # Переопределяем dispatch()
     def dispatch(self, request, *args, **kwargs):
         self._post = get_object_or_404(Post, pk=kwargs['post_id'])
         return super().dispatch(request, *args, **kwargs)
 
-    # Переопределяем form_valid()
     def form_valid(self, form):
         form.instance.author = self.request.user
         form.instance.post = self._post
         return super().form_valid(form)
 
 
-class PostCreateViews(LoginRequiredMixin, CreateView):
-    """ Добавление публикации """
-    model = Post
+class PostCreateViews(PostMixin, LoginRequiredMixin, CreateView):
     form_class = PostForm
     template_name = 'blog/create.html'
 
@@ -154,9 +147,7 @@ class PostCreateViews(LoginRequiredMixin, CreateView):
         return url
 
 
-class PostUpdateView(LoginRequiredMixin, UpdateView):
-    """ Редактирование своих публикаций """
-    model = Post
+class PostUpdateView(PostMixin, LoginRequiredMixin, UpdateView):
     template_name = 'blog/create.html'
     form_class = PostForm
     pk_url_kwarg = 'post_id'
@@ -172,9 +163,7 @@ class PostUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class PostDeleteView(LoginRequiredMixin, DeleteView):
-    """ Удаление своего поста """
-    model = Post
+class PostDeleteView(PostMixin, LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('blog:index')
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
@@ -188,13 +177,13 @@ class PostDeleteView(LoginRequiredMixin, DeleteView):
 
 
 class ProfiletUpdateView(UpdateView):
-    model = User
+    model = MyUser
     form_class = UserForm
     template_name = 'blog/user.html'
     success_url = reverse_lazy('blog:index')
 
     def get_object(self):
-        obj = get_object_or_404(User, username=self.request.user)
+        obj = get_object_or_404(MyUser, username=self.request.user)
         return obj
 
     def get_success_url(self):

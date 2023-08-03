@@ -1,27 +1,24 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.utils import timezone
 from django.views.generic import (
-    UpdateView, ListView, DetailView, DeleteView, CreateView
+    CreateView, DetailView, DeleteView, ListView, UpdateView
 )
 
 from .forms import PostForm, CommentForm, UserForm
 from blog.models import Post, Category, Comment
 from users.models import MyUser
+from .mixins import PostMixin, PostDispatchMixin
 
-
-class PostMixin:
-    model = Post
+PAGINATOR = 10
 
 
 class IndexListView(PostMixin, LoginRequiredMixin, ListView):
     template_name = 'blog/index.html'
-    ordering = ('-pub_date')
-    paginate_by = 10
+    paginate_by = PAGINATOR
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -33,9 +30,9 @@ class IndexListView(PostMixin, LoginRequiredMixin, ListView):
         return queryset
 
 
-class PostDetailView(PostMixin, LoginRequiredMixin, DetailView):
+class PostDetailView(LoginRequiredMixin, DetailView):
     template_name = 'blog/detail.html'
-    paginate_by = 10
+    paginate_by = PAGINATOR
     pk_url_kwarg = 'post_id'
 
     def get_queryset(self):
@@ -122,7 +119,8 @@ class PostCreateViews(PostMixin, LoginRequiredMixin, CreateView):
         return url
 
 
-class PostUpdateView(PostMixin, LoginRequiredMixin, UpdateView):
+class PostUpdateView(PostMixin, LoginRequiredMixin, PostDispatchMixin,
+                     UpdateView):
     template_name = 'blog/create.html'
     form_class = PostForm
     pk_url_kwarg = 'post_id'
@@ -130,39 +128,24 @@ class PostUpdateView(PostMixin, LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse('blog:post_detail', args=[str(self.post_id)])
 
-    def dispatch(self, request, *args, **kwargs):
-        self.post_id = kwargs['post_id']
-        instance = self.get_object()
-        if instance.author != request.user:
-            return redirect('blog:post_detail', post_id=kwargs['post_id'])
-        return super().dispatch(request, *args, **kwargs)
 
-
-class PostDeleteView(PostMixin, LoginRequiredMixin, DeleteView):
+class PostDeleteView(PostMixin, LoginRequiredMixin, PostDispatchMixin,
+                     DeleteView):
     success_url = reverse_lazy('blog:index')
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
 
-    def dispatch(self, request, *args, **kwargs):
-        self.post_id = kwargs['post_id']
-        instance = self.get_object()
-        if instance.author != request.user:
-            return redirect('blog:post_detail', post_id=kwargs['post_id'])
-        return super().dispatch(request, *args, **kwargs)
-
 
 class ProfileListView(ListView):
-    model = MyUser
     template_name = 'blog/profile.html'
-    paginate_by = 10
+    paginate_by = PAGINATOR
     fields = '__all__'
 
     def get_queryset(self):
-        username = self.kwargs['username']
-        try:
-            profile = MyUser.objects.get(username=username)
-        except MyUser.DoesNotExist:
-            raise Http404
+        profile = get_object_or_404(
+            MyUser,
+            username=self.kwargs['username']
+        )
         return Post.objects.annotate(
             comment_count=Count('comments')
         ).order_by('-pub_date').filter(author=profile)
@@ -193,17 +176,14 @@ class ProfiletUpdateView(UpdateView):
 class CategoryListView(LoginRequiredMixin, ListView):
     model = Category
     template_name = 'blog/category.html'
-    ordering = ('-pub_date')
-    paginate_by = 10
+    paginate_by = PAGINATOR
 
     def get_queryset(self):
         category = get_object_or_404(Category,
                                      slug=self.kwargs['slug'],
                                      is_published=True)
-        queryset = Post.objects.filter(category=category)
-        queryset = queryset.select_related(
-            'author',).order_by('-pub_date')
-        queryset = queryset.filter(
+        queryset = category.categories.select_related(
+            'author',).order_by('-pub_date').filter(
             pub_date__lte=timezone.now(), is_published=True).annotate(
                 comment_count=Count('comments'))
         return queryset

@@ -15,10 +15,8 @@ def internal_server_error(request):
 
 
 class AboutBlogicum(TemplateView):
-    ''' Возвращает HTML страницу '''
     template_name: str = 'pages/about.html'
 
 
 class RulesBlogicum(TemplateView):
-    ''' Возвращает HTML страницу '''
     template_name: str = 'pages/rules.html'

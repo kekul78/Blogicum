@@ -67,7 +67,7 @@ class Post(PublishedModel):
                                  on_delete=models.SET_NULL,
                                  null=True,
                                  verbose_name='Категория',
-                                 related_name='posts')
+                                 related_name='categories')
 
     image = models.ImageField('Фото', upload_to='posts_images', blank=True)
 
@@ -91,6 +91,8 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ('created_at',)
+        verbose_name = 'коментарий'
+        verbose_name_plural = 'Коментарии'
 
     def __str__(self):
         return self.author

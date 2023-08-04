@@ -36,13 +36,13 @@ class PostDetailView(LoginRequiredMixin, DetailView):
     pk_url_kwarg = 'post_id'
 
     def get_queryset(self):
-        post = get_object_or_404(Post.objects.filter(
-            pk=self.kwargs['post_id']))
-        if post.author == self.request.user:
+        if get_object_or_404(
+            Post.objects.filter(pk=self.kwargs['post_id']
+                                )).author == self.request.user:
             return Post.objects.filter(pk=self.kwargs['post_id'])
-        return Post.objects.all().filter(pub_date__lte=timezone.now(),
-                                         is_published=True,
-                                         category__is_published=True)
+        return Post.objects.filter(pub_date__lte=timezone.now(),
+                                   is_published=True,
+                                   category__is_published=True)
 
     def get_context_data(self, **kwargs):
         context = dict(**super().get_context_data(**kwargs),
@@ -182,8 +182,7 @@ class CategoryListView(LoginRequiredMixin, ListView):
         category = get_object_or_404(Category,
                                      slug=self.kwargs['slug'],
                                      is_published=True)
-        queryset = category.categories.select_related(
-            'author',).order_by('-pub_date').filter(
-            pub_date__lte=timezone.now(), is_published=True).annotate(
-                comment_count=Count('comments'))
-        return queryset
+        return category.posts.select_related(
+               'author',).order_by('-pub_date').filter(
+               pub_date__lte=timezone.now(), is_published=True).annotate(
+               comment_count=Count('comments'))

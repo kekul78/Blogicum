@@ -54,25 +54,23 @@ class Post(PublishedModel):
         MyUser,
         on_delete=models.CASCADE,
         verbose_name='Автор публикации',
-        related_name='posts',
         null=True,
     )
     location = models.ForeignKey(Location,
                                  on_delete=models.SET_NULL,
                                  null=True,
                                  blank=True,
-                                 verbose_name='Местоположение',
-                                 related_name='posts')
+                                 verbose_name='Местоположение',)
     category = models.ForeignKey(Category,
                                  on_delete=models.SET_NULL,
                                  null=True,
-                                 verbose_name='Категория',
-                                 related_name='categories')
+                                 verbose_name='Категория',)
 
     image = models.ImageField('Фото', upload_to='posts_images', blank=True)
 
     class Meta:
-        ordering = ['-pub_date']
+        default_related_name = 'posts'
+        ordering = ('-pub_date',)
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
 

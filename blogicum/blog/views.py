@@ -179,11 +179,11 @@ class CategoryListView(LoginRequiredMixin, ListView):
     paginate_by = PAGINATOR
 
     def get_queryset(self):
-        category = get_object_or_404(Category,
-                                     slug=self.kwargs['slug'],
-                                     is_published=True).posts.select_related(
-                   'author',).order_by('-pub_date').filter(
-                   pub_date__lte=timezone.now(), is_published=True).annotate(
-                   comment_count=Count('comments'))
-
+        category = get_object_or_404(
+           Category,
+           slug=self.kwargs['slug'],
+           is_published=True
+        ).posts.select_related('author',).order_by('-pub_date').filter(
+         pub_date__lte=timezone.now(), is_published=True).annotate(
+         comment_count=Count('comments'))
         return category

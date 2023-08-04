@@ -183,6 +183,6 @@ class CategoryListView(LoginRequiredMixin, ListView):
                                      slug=self.kwargs['slug'],
                                      is_published=True)
         return category.posts.select_related(
-               'author',).order_by('-pub_date').filter(
-               pub_date__lte=timezone.now(), is_published=True).annotate(
-               comment_count=Count('comments'))
+                   'author',).order_by('-pub_date').filter(
+                   pub_date__lte=timezone.now(), is_published=True).annotate(
+                   comment_count=Count('comments'))
